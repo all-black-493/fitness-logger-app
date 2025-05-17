@@ -94,7 +94,7 @@ export function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-2xl opacity-20 blur-3xl"></div>
             <div className="relative h-full w-full rounded-2xl overflow-hidden border shadow-xl">
               <img
-                src="/placeholder.svg?height=800&width=600"
+                src="/hero.jpeg?height=800&width=600"
                 alt="Fitness tracking app interface"
                 className="h-full w-full object-cover"
               />

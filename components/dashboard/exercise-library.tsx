@@ -16,9 +16,42 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
+interface Exercise {
+  id: string;
+  name: string;
+  bodyPart: string;
+  gifUrl: string;
+  target?: string;
+  equipment?: string;
+}
+
 export function ExerciseLibrary() {
   const [searchTerm, setSearchTerm] = useState("")
   const libraryRef = useRef<HTMLDivElement>(null)
+  const [exercises, setExercises] = useState<Exercise[]>([])
+
+  const fetchExercises = async () => {
+    const url = 'https://exercisedb.p.rapidapi.com/exercises?limit=10000&offset=0'
+    const options = {
+      method: 'GET',
+      headers: {
+        'x-rapidapi-key': 'c7914ea460msh55431bfbf2a24b1p18e9adjsnb7e5e5f486d4',
+        'x-rapidapi-host': 'exercisedb.p.rapidapi.com'
+      }
+    }
+
+    try {
+      const response = await fetch(url, options)
+      const result = await response.json()
+      setExercises(result)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  useEffect(() => {
+    fetchExercises()
+  }, [])
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -32,25 +65,15 @@ export function ExerciseLibrary() {
     }, libraryRef)
 
     return () => ctx.revert()
-  }, [])
-
-  // Mock exercise data
-  const exercises = [
-    { id: 1, name: "Bench Press", category: "chest", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 2, name: "Squats", category: "legs", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 3, name: "Deadlift", category: "back", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 4, name: "Shoulder Press", category: "shoulders", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 5, name: "Bicep Curls", category: "arms", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 6, name: "Tricep Extensions", category: "arms", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 7, name: "Pull-ups", category: "back", gifUrl: "/placeholder.svg?height=200&width=200" },
-    { id: 8, name: "Leg Press", category: "legs", gifUrl: "/placeholder.svg?height=200&width=200" },
-  ]
+  }, [exercises])
 
   const filteredExercises = exercises.filter(
     (exercise) =>
       exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exercise.category.toLowerCase().includes(searchTerm.toLowerCase()),
+      exercise.bodyPart.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const bodyParts = [...new Set(exercises.map(exercise => exercise.bodyPart))]
 
   return (
     <Card ref={libraryRef}>
@@ -58,6 +81,7 @@ export function ExerciseLibrary() {
         <CardTitle>Exercise Library</CardTitle>
         <CardDescription>Browse exercises and learn proper form</CardDescription>
       </CardHeader>
+      
       <CardContent>
         <div className="flex mb-4">
           <div className="relative flex-1">
@@ -72,13 +96,13 @@ export function ExerciseLibrary() {
         </div>
 
         <Tabs defaultValue="all">
-          <TabsList className="grid grid-cols-6 mb-4">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4 overflow-x-auto">
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="chest">Chest</TabsTrigger>
-            <TabsTrigger value="back">Back</TabsTrigger>
-            <TabsTrigger value="legs">Legs</TabsTrigger>
-            <TabsTrigger value="shoulders">Shoulders</TabsTrigger>
-            <TabsTrigger value="arms">Arms</TabsTrigger>
+            {bodyParts.map((bodyPart, index) => (
+              <TabsTrigger key={index} value={bodyPart} className="capitalize">
+                {bodyPart}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="all" className="mt-0">
@@ -89,11 +113,11 @@ export function ExerciseLibrary() {
             </div>
           </TabsContent>
 
-          {["chest", "back", "legs", "shoulders", "arms"].map((category) => (
-            <TabsContent key={category} value={category} className="mt-0">
+          {bodyParts.map((bodyPart, index) => (
+            <TabsContent key={index} value={bodyPart} className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {filteredExercises
-                  .filter((ex) => ex.category === category)
+                  .filter((ex) => ex.bodyPart === bodyPart)
                   .map((exercise) => (
                     <ExerciseCard key={exercise.id} exercise={exercise} />
                   ))}
@@ -106,22 +130,22 @@ export function ExerciseLibrary() {
   )
 }
 
-interface Exercise {
-  id: number
-  name: string
-  category: string
-  gifUrl: string
-}
-
 function ExerciseCard({ exercise }: { exercise: Exercise }) {
   return (
     <div className="exercise-card border rounded-lg overflow-hidden">
       <div className="relative h-40 bg-muted">
-        <img src={exercise.gifUrl || "/placeholder.svg"} alt={exercise.name} className="w-full h-full object-cover" />
+        <img 
+          src={exercise.gifUrl || "/placeholder.svg"} 
+          alt={exercise.name} 
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "/placeholder.svg"
+          }}
+        />
       </div>
       <div className="p-3">
         <h3 className="font-medium">{exercise.name}</h3>
-        <p className="text-xs text-muted-foreground capitalize">{exercise.category}</p>
+        <p className="text-xs text-muted-foreground capitalize">{exercise.bodyPart}</p>
         <div className="flex gap-2 mt-2">
           <Dialog>
             <DialogTrigger asChild>
@@ -141,14 +165,18 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
                     src={exercise.gifUrl || "/placeholder.svg"}
                     alt={exercise.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/placeholder.svg"
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-medium">Instructions</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Detailed instructions on how to perform the {exercise.name} with proper form. This would include
-                    step-by-step guidance and tips to maximize effectiveness and prevent injury.
-                  </p>
+                  <h4 className="font-medium">Target Muscle</h4>
+                  <p className="text-sm">{exercise.target || 'Not specified'}</p>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium">Equipment</h4>
+                  <p className="text-sm">{exercise.equipment || 'Not specified'}</p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="font-medium">Video Tutorial</h4>

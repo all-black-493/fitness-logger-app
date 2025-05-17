@@ -36,7 +36,7 @@ export function CompetitionCard() {
 
   const competitors = [
     { name: "You", progress: 85, image: "/placeholder.svg?height=40&width=40" },
-    { name: "Mike", progress: 92, image: "/placeholder.svg?height=40&width=40" },
+    { name: "Mike", progress: 99, image: "/placeholder.svg?height=40&width=40" },
     { name: "Sarah", progress: 78, image: "/placeholder.svg?height=40&width=40" },
     { name: "Alex", progress: 65, image: "/placeholder.svg?height=40&width=40" },
   ]

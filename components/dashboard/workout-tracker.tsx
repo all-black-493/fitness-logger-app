@@ -108,7 +108,7 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
                     <div className="grid grid-cols-12 gap-2 text-sm font-medium text-muted-foreground">
                       <div className="col-span-1">#</div>
                       <div className="col-span-5">Reps</div>
-                      <div className="col-span-6">Weight (lbs)</div>
+                      <div className="col-span-6">Weight (kgs)</div>
                     </div>
 
                     {exercise.sets.map((set, setIndex) => (
