@@ -169,7 +169,6 @@ export function FriendRequests() {
 
       if (error) throw error
 
-      // Update UI
       if (status === "accepted") {
         const acceptedRequest = pendingRequests.find((req) => req.id === requestId)
         if (acceptedRequest?.sender) {
