@@ -241,6 +241,7 @@ export function ChallengeCard() {
   return (
     <Card ref={cardRef}>
       <CardHeader>
+        <h4 className="font-semibold mb-2">Active Challenge</h4>
         <CardTitle>{currentChallenge.name}</CardTitle>
         <CardDescription>{currentChallenge.description}</CardDescription>
       </CardHeader>

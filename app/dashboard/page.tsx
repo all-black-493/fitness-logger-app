@@ -18,9 +18,9 @@ export default function DashboardPage() {
         <ProgressChart />
         <AiSuggestions />
       </div>
-      <div className="mt-6">
+      {/* <div className="mt-6">
         <ExerciseLibrary />
-      </div>
+      </div> */}
     </DashboardShell>
   )
 }
