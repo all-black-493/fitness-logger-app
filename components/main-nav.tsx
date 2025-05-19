@@ -30,7 +30,7 @@ export function MainNav() {
               Exercises
             </Link>
             <Link
-              href="/competitions"
+              href="/challenges"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
                 pathname.startsWith("/challenges") ? "text-primary" : "text-muted-foreground",
