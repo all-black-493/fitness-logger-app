@@ -29,7 +29,6 @@ export function FriendRequests() {
     const fetchFriendsAndRequests = async () => {
       setLoading(true)
       try {
-        // Fetch pending friend requests
         const { data: requests, error: requestsError } = await supabase
           .from("friend_requests")
           .select(`
@@ -42,7 +41,6 @@ export function FriendRequests() {
         if (requestsError) throw requestsError
         setPendingRequests(requests || [])
 
-        // Fetch accepted friends
         const { data: acceptedRequests, error: acceptedError } = await supabase
           .from("friend_requests")
           .select(`
@@ -55,7 +53,6 @@ export function FriendRequests() {
 
         if (acceptedError) throw acceptedError
 
-        // Process friends list
         const friendsList: Profile[] = []
         acceptedRequests?.forEach((request) => {
           if (request.sender && request.receiver) {
@@ -113,7 +110,6 @@ export function FriendRequests() {
     if (!user) return
 
     try {
-      // Check if a request already exists
       const { data: existingRequest, error: checkError } = await supabase
         .from("friend_requests")
         .select("*")

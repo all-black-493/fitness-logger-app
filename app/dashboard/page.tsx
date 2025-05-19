@@ -3,7 +3,6 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { WorkoutTracker } from "@/components/dashboard/workout-tracker"
 import { ChallengeCard } from "@/components/dashboard/challenge-card"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
-import { ExerciseLibrary } from "@/components/dashboard/exercise-library"
 import { AiSuggestions } from "@/components/dashboard/ai-suggestions"
 
 export default function DashboardPage() {
