@@ -27,7 +27,6 @@ export function FeaturesSection() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Animate the title
       gsap.from(".features-title", {
         y: 50,
         opacity: 0,
@@ -38,7 +37,6 @@ export function FeaturesSection() {
         },
       });
 
-      // Animate each feature card
       gsap.utils.toArray(".feature-card").forEach((card, i) => {
         gsap.from(card, {
           y: 50,

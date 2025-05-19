@@ -1,12 +1,19 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { gsap } from "gsap"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Search, Play, Info } from "lucide-react"
+import { useState, useEffect, useRef } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { gsap } from "gsap";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, Play, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { API_OPTIONS } from "./apis/api";
+import { BASE_URL } from "./urls/urls";
 
 interface Exercise {
   id: string;
@@ -26,32 +35,37 @@ interface Exercise {
 }
 
 export function ExerciseLibrary() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const libraryRef = useRef<HTMLDivElement>(null)
-  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [searchTerm, setSearchTerm] = useState("");
+  const libraryRef = useRef<HTMLDivElement>(null);
 
-  const fetchExercises = async () => {
-    const url = 'https://exercisedb.p.rapidapi.com/exercises?limit=10000&offset=0'
-    const options = {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': 'c7914ea460msh55431bfbf2a24b1p18e9adjsnb7e5e5f486d4',
-        'x-rapidapi-host': 'exercisedb.p.rapidapi.com'
-      }
+  const fetchExercises = async ({ pageParam = 1 }) => {
+    const url = `${BASE_URL}?limit=20&offset=${pageParam}`;
+    const response = await fetch(url, API_OPTIONS);
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
     }
+    return response.json();
+  };
 
-    try {
-      const response = await fetch(url, options)
-      const result = await response.json()
-      setExercises(result)
-    } catch (error) {
-      console.error(error)
-    }
-  }
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    status,
+  } = useInfiniteQuery({
+    queryKey: ["exercises"],
+    queryFn: fetchExercises,
+    getNextPageParam: (lastPage, allPages) => {
+      const nextOffset = allPages.length * 20;
+      return lastPage.length === 20 ? nextOffset : undefined;
+    },
+    initialPageParam: 1,
+  });
 
-  useEffect(() => {
-    fetchExercises()
-  }, [])
+  const allExercises = data?.pages.flat() || [];
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -61,27 +75,31 @@ export function ExerciseLibrary() {
         duration: 0.5,
         stagger: 0.1,
         ease: "power3.out",
-      })
-    }, libraryRef)
+      });
+    }, libraryRef);
 
-    return () => ctx.revert()
-  }, [exercises])
+    return () => ctx.revert();
+  }, [allExercises]);
 
-  const filteredExercises = exercises.filter(
+  const filteredExercises = allExercises.filter(
     (exercise) =>
       exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exercise.bodyPart.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  );
 
-  const bodyParts = [...new Set(exercises.map(exercise => exercise.bodyPart))]
+  const bodyParts = [
+    ...new Set(allExercises.map((exercise) => exercise.bodyPart)),
+  ];
 
   return (
     <Card ref={libraryRef}>
       <CardHeader>
         <CardTitle>Exercise Library</CardTitle>
-        <CardDescription>Browse exercises and learn proper form</CardDescription>
+        <CardDescription>
+          Browse exercises and learn proper form
+        </CardDescription>
       </CardHeader>
-      
+
       <CardContent>
         <div className="flex mb-4">
           <div className="relative flex-1">
@@ -96,8 +114,7 @@ export function ExerciseLibrary() {
         </div>
 
         <Tabs defaultValue="all">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4 overflow-x-auto">
-            <TabsTrigger value="all">All</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-2 overflow-x-auto gap-0.5">
             {bodyParts.map((bodyPart, index) => (
               <TabsTrigger key={index} value={bodyPart} className="capitalize">
                 {bodyPart}
@@ -111,6 +128,19 @@ export function ExerciseLibrary() {
                 <ExerciseCard key={exercise.id} exercise={exercise} />
               ))}
             </div>
+            <div className="mt-4 flex justify-center">
+              <Button
+                onClick={() => fetchNextPage()}
+                disabled={!hasNextPage || isFetchingNextPage}
+                className="mt-4"
+              >
+                {isFetchingNextPage
+                  ? "Loading more..."
+                  : hasNextPage
+                  ? "Load More"
+                  : "Nothing more to load"}
+              </Button>
+            </div>
           </TabsContent>
 
           {bodyParts.map((bodyPart, index) => (
@@ -122,30 +152,42 @@ export function ExerciseLibrary() {
                     <ExerciseCard key={exercise.id} exercise={exercise} />
                   ))}
               </div>
+              <div className="mt-4 flex justify-center">
+                <Button
+                  onClick={() => fetchNextPage()}
+                  disabled={!hasNextPage || isFetchingNextPage}
+                  className="mt-4"
+                >
+                  {isFetchingNextPage
+                    ? "Loading more..."
+                    : hasNextPage
+                    ? "Load More"
+                    : "Nothing more to load"}
+                </Button>
+              </div>
             </TabsContent>
           ))}
         </Tabs>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function ExerciseCard({ exercise }: { exercise: Exercise }) {
   return (
     <div className="exercise-card border rounded-lg overflow-hidden">
       <div className="relative h-40 bg-muted">
-        <img 
-          src={exercise.gifUrl || "/placeholder.svg"} 
-          alt={exercise.name} 
+        <img
+          src={exercise.gifUrl || "/placeholder.svg"}
+          alt={exercise.name}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = "/placeholder.svg"
-          }}
         />
       </div>
       <div className="p-3">
         <h3 className="font-medium">{exercise.name}</h3>
-        <p className="text-xs text-muted-foreground capitalize">{exercise.bodyPart}</p>
+        <p className="text-xs text-muted-foreground capitalize">
+          {exercise.bodyPart}
+        </p>
         <div className="flex gap-2 mt-2">
           <Dialog>
             <DialogTrigger asChild>
@@ -157,7 +199,9 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{exercise.name}</DialogTitle>
-                <DialogDescription>Learn how to perform this exercise correctly</DialogDescription>
+                <DialogDescription>
+                  Learn how to perform this exercise correctly
+                </DialogDescription>
               </DialogHeader>
               <div className="flex flex-col space-y-4">
                 <div className="aspect-video bg-muted rounded-md overflow-hidden">
@@ -165,18 +209,15 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
                     src={exercise.gifUrl || "/placeholder.svg"}
                     alt={exercise.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/placeholder.svg"
-                    }}
                   />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-medium">Target Muscle</h4>
-                  <p className="text-sm">{exercise.target || 'Not specified'}</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-medium">Equipment</h4>
-                  <p className="text-sm">{exercise.equipment || 'Not specified'}</p>
+                  <h4 className="font-medium">Instructions</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Detailed instructions on how to perform the {exercise.name}{" "}
+                    with proper form. This would include step-by-step guidance
+                    and tips to maximize effectiveness and prevent injury.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="font-medium">Video Tutorial</h4>
@@ -191,5 +232,5 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
