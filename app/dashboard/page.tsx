@@ -3,7 +3,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell"
 import { WorkoutTracker } from "@/components/dashboard/workout-tracker"
 import { ChallengeCard } from "@/components/dashboard/challenge-card"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
-import { AiSuggestions } from "@/components/dashboard/ai-suggestions"
+// import { AiSuggestions } from "@/components/dashboard/ai-suggestions"
 
 export default function DashboardPage() {
   return (
@@ -15,7 +15,7 @@ export default function DashboardPage() {
       </div>
       <div className="grid gap-6 md:grid-cols-2 mt-6">
         <ProgressChart />
-        <AiSuggestions />
+        {/* <AiSuggestions /> */}
       </div>
       {/* <div className="mt-6">
         <ExerciseLibrary />
