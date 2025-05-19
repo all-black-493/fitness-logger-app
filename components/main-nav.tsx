@@ -21,6 +21,15 @@ export function MainNav() {
           // Links for authenticated users
           <>
             <Link
+              href="/dashboard"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname.startsWith("/exercises") ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              Dashboard
+            </Link>
+            <Link
               href="/exercises"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
