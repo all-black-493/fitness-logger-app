@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { gsap } from "gsap"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
 
 export function HeroSection() {
   const heroRef = useRef<HTMLDivElement>(null)
@@ -10,10 +12,19 @@ export function HeroSection() {
   const descriptionRef = useRef<HTMLParagraphElement>(null)
   const ctaRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLDivElement>(null)
+  const { user } = useAuth()
+  const router = useRouter()
+
+  const handleGetStarted = () => {
+    if (user) {
+      router.push("/dashboard")
+    } else {
+      router.push("/register")
+    }
+  }
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Initial animation timeline
       const tl = gsap.timeline()
 
       tl.from(titleRef.current, {
@@ -53,7 +64,6 @@ export function HeroSection() {
           "-=0.6",
         )
 
-      // Floating animation for the image
       gsap.to(imageRef.current, {
         y: 15,
         duration: 2,
@@ -82,8 +92,8 @@ export function HeroSection() {
               fitness community today.
             </p>
             <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button size="lg" className="bg-emerald-500 hover:bg-emerald-600">
-                Get Started
+              <Button size="lg" className="bg-emerald-500 hover:bg-emerald-600" onClick={handleGetStarted}>
+                {user? "Go To Dashboard":"Get Started"}
               </Button>
               <Button size="lg" variant="outline">
                 Watch Demo
@@ -94,7 +104,7 @@ export function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-2xl opacity-20 blur-3xl"></div>
             <div className="relative h-full w-full rounded-2xl overflow-hidden border shadow-xl">
               <img
-                src="/hero.jpeg?height=900&width=800"
+                src="/hero.jpeg?height=800&width=600"
                 alt="Fitness tracking app interface"
                 className="h-full w-full object-cover"
               />

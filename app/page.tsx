@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { MainNav } from "@/components/main-nav"
+import { UserNav } from "@/components/dashboard/user-nav"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturesSection } from "@/components/features-section"
 import { useAuth } from "@/contexts/auth-context"
@@ -18,9 +19,7 @@ export default function Home() {
           <div className="ml-auto flex items-center space-x-4">
             {!isLoading &&
               (user ? (
-                <Button className="bg-emerald-500 hover:bg-emerald-600" asChild>
-                  <Link href="/dashboard">Dashboard</Link>
-                </Button>
+                <UserNav />
               ) : (
                 <>
                   <Button variant="outline" asChild>
