@@ -7,7 +7,7 @@ import { ChallengeForm } from "@/components/challenges/challenge-form"
 export default function SocialPage() {
   return (
     <DashboardShell>
-      <DashboardHeader heading="Social" text="Connect with friends and participate in challenges." />
+      <DashboardHeader heading="Connect" text="Link up with friends and participate in challenges." />
       <div className="grid gap-6 md:grid-cols-2">
         <FriendRequests />
         <div className="space-y-6">
