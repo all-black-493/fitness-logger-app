@@ -30,15 +30,15 @@ export function MainNav() {
               Dashboard
             </Link>
             <Link
-              href="/exercises"
+              href="/social"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
-                pathname.startsWith("/exercises") ? "text-primary" : "text-muted-foreground",
+                pathname.startsWith("/social") ? "text-primary" : "text-muted-foreground",
               )}
             >
-              Exercises
+              Social
             </Link>
-            <Link
+            {/* <Link
               href="/challenges"
               className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
@@ -55,7 +55,7 @@ export function MainNav() {
               )}
             >
               Communities
-            </Link>
+            </Link> */}
           </>
         ) : (
           // Links for non-authenticated users
