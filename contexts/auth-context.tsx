@@ -48,12 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       setUser(session?.user || null)
       setIsLoading(false)
 
-      // Refresh the page to update server components
       router.refresh()
     })
 
@@ -63,11 +62,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router])
 
   const signUp = async (email: string, password: string, options?: { metadata?: Record<string, any> }) => {
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: options,
     })
+
+    if (!error && data.user) {
+      try {
+        const username = email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "")
+
+        const fullName = options?.metadata?.full_name || null
+
+        const firstLetter = email.charAt(0).toUpperCase()
+        const avatarUrl = `https://ui-avatars.com/api/?name=${firstLetter}&background=10b981&color=ffffff`
+
+        await supabase.from("profiles").insert({
+          id: data.user.id,
+          username: username,
+          full_name: fullName,
+          avatar_url: avatarUrl,
+        })
+      } catch (profileError) {
+        console.error("Error creating profile during signup:", profileError)
+      }
+    }
+
     return { error }
   }
 

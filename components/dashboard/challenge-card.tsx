@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/contexts/auth-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
 import { formatDistanceToNow } from "date-fns"
+import { Trophy } from "lucide-react"
 
 type Challenge = {
   id: string
@@ -242,7 +243,11 @@ export function ChallengeCard() {
     <Card ref={cardRef}>
       <CardHeader>
         <h4 className="font-semibold mb-2">Active Challenge</h4>
-        <CardTitle>{currentChallenge.name}</CardTitle>
+        <CardTitle>
+          <div className="flex space-x-2">
+            <Trophy /><span>{currentChallenge.name}</span>
+          </div>
+        </CardTitle>
         <CardDescription>{currentChallenge.description}</CardDescription>
       </CardHeader>
       <CardContent>

@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { useState } from "react"
 import { AuthProvider } from "@/contexts/auth-context"
+import { ProfileTrigger } from "@/components/auth/profile-trigger"
+
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -18,6 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableColorScheme>
       <AuthProvider>
+        <ProfileTrigger />
         <QueryClientProvider client={queryClient}>
           {children}
           <ReactQueryDevtools initialIsOpen={false} />

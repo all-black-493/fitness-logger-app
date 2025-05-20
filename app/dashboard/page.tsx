@@ -13,7 +13,7 @@ export default function DashboardPage() {
         <WorkoutTracker className="lg:col-span-2" />
         <ChallengeCard />
       </div>
-      <div className="grid gap-6 md:grid-cols-2 mt-6">
+      <div className="mt-6 w-full">
         <ProgressChart />
         {/* <AiSuggestions /> */}
       </div>
