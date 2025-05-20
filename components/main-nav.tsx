@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Dumbbell } from "lucide-react"
+import { Dumbbell, Users } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -36,7 +36,10 @@ export function MainNav() {
                 pathname.startsWith("/social") ? "text-primary" : "text-muted-foreground",
               )}
             >
-              Social
+              <div className="flex space-x-2">
+              <Users />
+              <span>Social</span>
+              </div>
             </Link>
             {/* <Link
               href="/challenges"
