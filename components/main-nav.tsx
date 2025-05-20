@@ -38,7 +38,7 @@ export function MainNav() {
             >
               <div className="flex space-x-2">
               <Users />
-              <span>Social</span>
+              <span>Connect</span>
               </div>
             </Link>
             {/* <Link
