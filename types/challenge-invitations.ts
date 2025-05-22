@@ -6,7 +6,7 @@ export type ChallengeInvitation = {
   status: "pending" | "accepted" | "dismissed"
   created_at: string
   updated_at: string
-  challenge?: {
+  challenge: {
     name: string
     description: string | null
   }
