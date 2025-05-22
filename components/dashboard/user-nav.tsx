@@ -14,10 +14,21 @@ import {
 import { Bell, Settings, LogOut, User } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ChallengeInvitations } from "@/components/challenges/challenge-invitations"
+import { useToast } from "@/components/ui/use-toast"
+import { NotificationsDropdown } from "../notifications/notifications-dropdown"
 
 export function UserNav() {
   const { user, signOut } = useAuth()
   const router = useRouter()
+  const [invitationCount, setInvitationCount] = useState(0)
+  const [activeTab, setActiveTab] = useState("invitations")
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
+  const supabase = getSupabaseBrowserClient()
 
   const handleSignOut = async () => {
     await signOut()
@@ -27,11 +38,115 @@ export function UserNav() {
   const username = user?.user_metadata?.username || "User"
   const avatarUrl = user?.user_metadata?.avatar_url
 
+  // Fetch invitation count
+  useEffect(() => {
+    if (!user) return
+
+    const fetchInvitationCount = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("challenge_invitations")
+          .select("id")
+          .eq("receiver_id", user.id)
+          .eq("status", "pending")
+
+        if (error) throw error
+        setInvitationCount(data?.length || 0)
+      } catch (error) {
+        console.error("Error fetching invitation count:", error)
+      }
+    }
+
+    fetchInvitationCount()
+
+    // Set up real-time subscription for invitations
+    const invitationsChannel = supabase
+      .channel("user-invitations")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "challenge_invitations",
+          filter: `receiver_id=eq.${user.id} AND status=eq.pending`,
+        },
+        () => {
+          setInvitationCount((prev) => prev + 1)
+          toast({
+            title: "New Challenge Invitation",
+            description: "You've been invited to join a challenge!",
+          })
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "challenge_invitations",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload: any) => {
+          if (payload.new.status !== "pending") {
+            setInvitationCount((prev) => Math.max(0, prev - 1))
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(invitationsChannel)
+    }
+  }, [user, supabase, toast])
+
+  const handleInvitationUpdate = () => {
+    if (user) {
+      supabase
+        .from("challenge_invitations")
+        .select("id")
+        .eq("receiver_id", user.id)
+        .eq("status", "pending")
+        .then(({ data }) => {
+          setInvitationCount(data?.length || 0)
+        })
+    }
+  }
+
   return (
     <div className="flex items-center gap-4">
-      <Button variant="ghost" size="icon">
-        <Bell className="h-5 w-5" />
-      </Button>
+      <NotificationsDropdown />
+      {/* <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            {invitationCount > 0 && (
+              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">
+                {invitationCount > 9 ? "9+" : invitationCount}
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-96" align="end">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="flex items-center justify-between px-2">
+              <TabsList>
+                <TabsTrigger value="invitations" className="relative">
+                  Challenge Invitations
+                  {invitationCount > 0 && (
+                    <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">
+                      {invitationCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="invitations" className="mt-0 max-h-[400px] overflow-y-auto">
+              <ChallengeInvitations inDropdown onUpdate={handleInvitationUpdate} />
+            </TabsContent>
+          </Tabs>
+        </DropdownMenuContent>
+      </DropdownMenu> */}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

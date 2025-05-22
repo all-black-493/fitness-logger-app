@@ -43,6 +43,7 @@ export function ChallengeInvitations({ inDropdown = false, onUpdate }: Challenge
           .order("created_at", { ascending: false })
 
         if (error) throw error
+        console.log("invites: ", data)
         setInvitations(data || [])
       } catch (error) {
         console.error("Error fetching challenge invitations:", error)
@@ -212,6 +213,7 @@ export function ChallengeInvitations({ inDropdown = false, onUpdate }: Challenge
           const timeAgo = formatDistanceToNow(new Date(invitation.created_at), { addSuffix: true })
           const isResponding = responding === invitation.id
 
+          console.log('Challenge data:', invitation.challenge_id)
           return (
             <div key={invitation.id} className="flex flex-col space-y-2 p-2 border rounded-md">
               <div className="flex items-center space-x-2">
@@ -227,7 +229,7 @@ export function ChallengeInvitations({ inDropdown = false, onUpdate }: Challenge
                 </div>
               </div>
               <p className="text-sm">
-                Invited you to join "<span className="font-medium">{invitation.challenge?.name}</span>"
+                Invited you to join <span className="font-medium">{invitation?.challenge?.name}</span>
               </p>
               <div className="flex space-x-2">
                 <Button

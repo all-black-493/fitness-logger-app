@@ -19,80 +19,86 @@ import { Trophy, UserPlus, Users } from "lucide-react"
 import { InviteFriends } from "@/components/challenges/invite-friends"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ChallengeInvitation } from "@/types/challenge-invitations"
+import { Inter } from "next/font/google"
+
+const inter = Inter({ subsets: ["latin"] })
+
 
 export function ChallengeCard() {
   const cardRef = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
-  const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
-  const [participants, setParticipants] = useState<ChallengeParticipant[]>([])
-  const [pendingInvites, setPendingInvites] = useState<any[]>([])
-  const [upcomingChallenges, setUpcomingChallenges] = useState<UpcomingChallenge[]>([])
-  const [loading, setLoading] = useState(true)
-  const [userProgress, setUserProgress] = useState(0)
-  const [isUpdating, setIsUpdating] = useState(false)
-  const [showUpdateForm, setShowUpdateForm] = useState(false)
-  const [showInviteDialog, setShowInviteDialog] = useState(false)
-  const [activeTab, setActiveTab] = useState("participants")
+  const { user } = useAuth() //Current Authenticated User
+  const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null) //currentChallenge is a variable whose type is Challenge and whose value is currently null
+  const [participants, setParticipants] = useState<ChallengeParticipant[]>([]) //No participants yet
+  const [pendingInvites, setPendingInvites] = useState<ChallengeInvitation[]>([]) //No pending invites yet
+  const [upcomingChallenges, setUpcomingChallenges] = useState<UpcomingChallenge[]>([]) //No upcomingChallenges yet
+  const [loading, setLoading] = useState(true)//Loading is initially True
+  const [userProgress, setUserProgress] = useState(0) //Initial userProgress value is false
+  const [isUpdating, setIsUpdating] = useState(false) //Initial isUpdating is false
+  const [showUpdateForm, setShowUpdateForm] = useState(false) //Not currently showing update form
+  const [showInviteDialog, setShowInviteDialog] = useState(false) //Same applies here
+  const [activeTab, setActiveTab] = useState("participants") //activeTab is participants
   const { toast } = useToast()
   const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
-    if (!user) return
-
+    if (!user) return // Return  nothing if the user is not authenticated or does not exist
+    //We are defining a function here. Not yet calling it
     const fetchCurrentChallenge = async () => {
       setLoading(true)
       try {
-        // Get the current active challenge
+        // 1. Get the current active challenge
         const { data: challenges, error } = await supabase
-          .from("challenges")
-          .select("*")
-          .lte("start_date", new Date().toISOString())
-          .gte("end_date", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
+          .from("challenges") // challenges table
+          .select("*") //all entries in the challenges table
+          .lte("start_date", new Date().toISOString()) //Challenges that HAVE BEGUN since the start date is less than today
+          .gte("end_date", new Date().toISOString()) //Challenges that HAVE NOT ENDED since the end date is greater than today
+          .order("created_at", { ascending: false }) //Newest first
+          .limit(1) //One challenge entry that meets all these requirements. Remember, we are fetching the current challenge!
 
         if (error) throw error
 
         if (challenges && challenges.length > 0) {
           setCurrentChallenge(challenges[0])
 
-          // Get participants for this challenge
+          // 2. Get participants for this challenge
           const { data: participants, error: participantsError } = await supabase
-            .from("challenge_participants")
+            .from("challenge_participants") //challenge_participants table
             .select(`
               *,
-              profile:profiles(username, full_name, avatar_url)
-            `)
-            .eq("challenge_id", challenges[0].id)
-            .order("progress", { ascending: false })
+              profile:profiles(username, full_name, avatar_url) 
+            `) // 3. alias name is profile so you can refer it as {participants.profile}
+            .eq("challenge_id", challenges[0].id) // where challenge_id is equivalent to Challenge.id
+            .order("progress", { ascending: false }) //Highest first Lowest last
 
+          console.log('Participants are: ', participants)
           if (participantsError) throw participantsError
           setParticipants(participants || [])
 
-          // Check if user is a participant and get their progress
+          // 4. Check if user is a participant and get their progress
           const userParticipant = participants?.find((p) => p.user_id === user.id)
           if (userParticipant) {
             setUserProgress(userParticipant.progress)
           }
 
-          // If user is the creator, get pending invitations
+          // 5. If user is the creator, get pending invitations
           if (challenges[0].created_by === user.id) {
             const { data: invites, error: invitesError } = await supabase
               .from("challenge_invitations")
               .select(`
                 *,
                 receiver:profiles!challenge_invitations_receiver_id_fkey(username, full_name, avatar_url)
-              `)
-              .eq("challenge_id", challenges[0].id)
-              .eq("sender_id", user.id)
-              .eq("status", "pending")
+              `) // 6. The alias here is receiver, so we get the pending invitations for this challenge this way {invites.receiver}
+              .eq("challenge_id", challenges[0].id) //obvious
+              .eq("sender_id", user.id) //obvious
+              .eq("status", "pending") //obvious
 
             if (invitesError) throw invitesError
             setPendingInvites(invites || [])
           }
         }
 
-        // Get upcoming challenges
+        // 7. Get upcoming challenges
         const { data: upcoming, error: upcomingError } = await supabase
           .from("challenges")
           .select("*")
@@ -111,7 +117,7 @@ export function ChallengeCard() {
 
     fetchCurrentChallenge()
 
-    // Set up real-time subscription for participants
+    // Hey! Watch the challenge_participants table, and if anything changes (like someone joins, updates their progress, or leaves), let me know right away — and when that happens, run my fetchCurrentChallenge() function
     const participantsChannel = supabase
       .channel("participants-changes")
       .on(
@@ -127,7 +133,7 @@ export function ChallengeCard() {
       )
       .subscribe()
 
-    // Set up real-time subscription for invitations
+    // Same applies here
     const invitationsChannel = supabase
       .channel("invitations-changes")
       .on(
@@ -143,6 +149,7 @@ export function ChallengeCard() {
       )
       .subscribe()
 
+    // Clean up to avoid memory leaks and bugs
     return () => {
       supabase.removeChannel(participantsChannel)
       supabase.removeChannel(invitationsChannel)
@@ -364,12 +371,16 @@ export function ChallengeCard() {
           <Trophy className="mr-2 h-5 w-5" />
           {currentChallenge.name}
         </CardTitle>
-        <CardDescription>{currentChallenge.description}</CardDescription>
+        <CardDescription>
+          <pre className={inter.className}>
+            {currentChallenge.description}
+          </pre>
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {isCreator && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="participants">Participants</TabsTrigger>
               <TabsTrigger value="invites" className="relative">
                 Pending Invites
@@ -380,85 +391,86 @@ export function ChallengeCard() {
                 )}
               </TabsTrigger>
             </TabsList>
-          </Tabs>
-        )}
-        <Tabs>
+            <TabsContent value="participants" className="mt-0 space-y-4">
+              {participants.map((participant, index) => {
+                const isCurrentUser = user && participant.user_id === user.id
+                const name = participant.profile?.full_name || participant.profile?.username || "Unknown User"
+                const initial = name.charAt(0).toUpperCase()
 
-        <TabsContent value="participants" className="mt-0 space-y-4">
-          {participants.map((participant, index) => {
-            const isCurrentUser = user && participant.user_id === user.id
-            const name = participant.profile?.full_name || participant.profile?.username || "Unknown User"
-            const initial = name.charAt(0).toUpperCase()
-
-            return (
-              <div key={participant.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="competition-avatar h-8 w-8">
-                      <AvatarImage
-                        src={participant.profile?.avatar_url || "/placeholder.svg?height=40&width=40"}
-                        alt={name}
-                      />
-                      <AvatarFallback>{initial}</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{isCurrentUser ? "You" : name}</span>
-                  </div>
-                  <span className="text-sm font-bold">{participant.progress}%</span>
-                </div>
-                <Progress
-                  className="competition-progress h-2"
-                  value={participant.progress}
-                  style={
-                    {
-                      "--progress-background": isCurrentUser ? "hsl(var(--emerald-500))" : undefined,
-                    } as React.CSSProperties
-                  }
-                />
-              </div>
-            )
-          })}
-
-          {participants.length === 0 && (
-            <p className="text-sm text-muted-foreground py-2">No participants yet. Be the first to join!</p>
-          )}
-        </TabsContent>
-
-        <TabsContent value="invites" className="mt-0">
-          {pendingInvites.length > 0 ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                These friends have been invited but haven't responded yet:
-              </p>
-              {pendingInvites.map((invite) => {
-                const name = invite.receiver?.full_name || invite.receiver?.username || "Unknown User"
-                const initial = (invite.receiver?.full_name?.[0] || invite.receiver?.username?.[0] || "?").toUpperCase()
-                const timeAgo = formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })
+                console.log("participant [indexed]: ", participant)
 
                 return (
-                  <div key={invite.id} className="flex items-center justify-between p-2 border rounded-md">
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={invite.receiver?.avatar_url || "/placeholder.svg?height=32&width=32"} />
-                        <AvatarFallback>{initial}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{name}</p>
-                        <p className="text-xs text-muted-foreground">Invited {timeAgo}</p>
+                  <div key={participant.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="competition-avatar h-8 w-8">
+                          <AvatarImage
+                            src={participant.profile?.avatar_url || "/placeholder.svg?height=40&width=40"}
+                            alt={name}
+                          />
+                          <AvatarFallback>{initial}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{isCurrentUser ? "You" : name}</span>
                       </div>
+                      <span className="text-sm font-bold">{participant.progress}%</span>
                     </div>
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Pending</span>
+                    <Progress
+                      className="competition-progress h-2"
+                      value={participant.progress}
+                      style={
+                        {
+                          "--progress-background": isCurrentUser ? "hsl(var(--emerald-500))" : undefined,
+                        } as React.CSSProperties
+                      }
+                    />
                   </div>
                 )
               })}
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <UserPlus className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-              <p className="text-muted-foreground">No pending invitations</p>
-            </div>
-          )}
-        </TabsContent>
-        </Tabs>
+
+
+              {participants.length === 0 && (
+                <p className="text-sm text-muted-foreground py-2">No participants yet. Be the first to join!</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="invites" className="mt-0">
+              {pendingInvites.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    These friends have been invited but haven't responded yet:
+                  </p>
+                  {pendingInvites.map((invite) => {
+                    const name = invite.receiver?.full_name || invite.receiver?.username || "Unknown User"
+                    const initial = (invite.receiver?.full_name?.[0] || invite.receiver?.username?.[0] || "?").toUpperCase()
+                    const timeAgo = formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })
+
+                    return (
+                      <div key={invite.id} className="flex items-center justify-between p-2 border rounded-md">
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={invite.receiver?.avatar_url || "/placeholder.svg?height=32&width=32"} />
+                            <AvatarFallback>{initial}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{name}</p>
+                            <p className="text-xs text-muted-foreground">Invited {timeAgo}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">Pending</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <UserPlus className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                  <p className="text-muted-foreground">No pending invitations</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
 
         <div className="flex space-x-2 mt-4">
           {showUpdateForm ? (

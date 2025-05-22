@@ -55,7 +55,7 @@ export function ProgressChart() {
  
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      console.log("Would fetch workout data for user:", user.id)
+      // console.log("Would fetch workout data for user:", user.id)
     } catch (error) {
       console.error("Error fetching workout data:", error)
       toast({
