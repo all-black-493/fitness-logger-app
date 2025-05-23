@@ -412,24 +412,13 @@ export function ChallengeCard() {
                         </Avatar>
                         <span className="font-medium">{isCurrentUser ? "You" : name}</span>
                       </div>
-                      <span className="text-sm font-bold">{participant.progress}%</span>
                     </div>
-                    <Progress
-                      className="competition-progress h-2"
-                      value={participant.progress}
-                      style={
-                        {
-                          "--progress-background": isCurrentUser ? "hsl(var(--emerald-500))" : undefined,
-                        } as React.CSSProperties
-                      }
-                    />
                   </div>
                 )
               })}
 
-
               {participants.length === 0 && (
-                <p className="text-sm text-muted-foreground py-2">No participants yet. Be the first to join!</p>
+                <p className="text-sm text-muted-foreground py-2">No participants yet. You are the first to join!</p>
               )}
             </TabsContent>
 
@@ -499,10 +488,7 @@ export function ChallengeCard() {
             </div>
           ) : (
             <>
-              <Button onClick={() => setShowUpdateForm(true)} className="flex-1" variant="outline">
-                Update Progress
-              </Button>
-
+              
               {isCreator && (
                 <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
                   <DialogTrigger asChild>
