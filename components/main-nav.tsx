@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Dumbbell, Users } from "lucide-react"
+import { Dumbbell, Users, Medal } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -39,6 +39,18 @@ export function MainNav() {
               <div className="flex space-x-2">
               <Users />
               <span>Connect</span>
+              </div>
+            </Link>
+            <Link
+              href="/leaderboard"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname.startsWith("/leaderboard") ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <div className="flex space-x-2">
+              <Medal />
+              <span>Leaderboard</span>
               </div>
             </Link>
             {/* <Link
