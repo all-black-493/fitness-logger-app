@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react"
 import { gsap } from "gsap"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/contexts/auth-context"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
@@ -17,7 +16,7 @@ import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/components/ui/use-toast"
 import { Trophy, UserPlus, Users } from "lucide-react"
 import { InviteFriends } from "@/components/challenges/invite-friends"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChallengeInvitation } from "@/types/challenge-invitations"
 import { Inter } from "next/font/google"
@@ -460,48 +459,22 @@ export function ChallengeCard() {
 
 
         <div className="flex space-x-2 mt-4">
-          {showUpdateForm ? (
-            <div className="w-full mt-2 pt-4 border-t">
-              <h4 className="font-semibold mb-4">Update Your Progress</h4>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Progress: {userProgress}%</span>
-                </div>
-                <Slider
-                  value={[userProgress]}
-                  min={0}
-                  max={100}
-                  step={1}
-                  onValueChange={(values) => setUserProgress(values[0])}
-                />
-                <div className="flex space-x-2">
-                  <Button variant="outline" onClick={() => setShowUpdateForm(false)} className="flex-1">
-                    Cancel
+          <>
+            {isCreator && (
+              <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Invite Friends
                   </Button>
-                  <Button onClick={updateProgress} disabled={isUpdating} className="flex-1">
-                    {isUpdating ? "Updating..." : "Save Progress"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              
-              {isCreator && (
-                <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="flex items-center">
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Invite Friends
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <InviteFriends challengeId={currentChallenge.id} onClose={() => setShowInviteDialog(false)} />
-                  </DialogContent>
-                </Dialog>
-              )}
-            </>
-          )}
+                </DialogTrigger>
+                <DialogTitle></DialogTitle>
+                <DialogContent>
+                  <InviteFriends challengeId={currentChallenge.id} onClose={() => setShowInviteDialog(false)} />
+                </DialogContent>
+              </Dialog>
+            )}
+          </>
         </div>
 
         {upcomingChallenges.length > 0 && (
