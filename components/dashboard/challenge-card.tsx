@@ -397,8 +397,6 @@ export function ChallengeCard() {
                 const name = participant.profile?.full_name || participant.profile?.username || "Unknown User"
                 const initial = name.charAt(0).toUpperCase()
 
-                console.log("participant [indexed]: ", participant)
-
                 return (
                   <div key={participant.id} className="space-y-2">
                     <div className="flex items-center justify-between">
