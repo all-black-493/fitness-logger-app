@@ -27,51 +27,53 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
       name: string
       sets: Array<{ reps: number; weight: number }>
     }>
-  >([])
-  const [newExercise, setNewExercise] = useState("")
-  const [workoutName, setWorkoutName] = useState("My Workout")
-  const [workoutNotes, setWorkoutNotes] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
-  const [workoutHistory, setWorkoutHistory] = useState<Workout[]>([])
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
-  const [activeTab, setActiveTab] = useState("current")
-  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null)
+  >([]) // Empty Array of exercises
+  const [newExercise, setNewExercise] = useState("") // Initial empty string
+  const [workoutName, setWorkoutName] = useState("My Workout") // Initial Workout name is My Workout
+  const [workoutNotes, setWorkoutNotes] = useState("") //Initial Workout notes is empty
+  const [isSaving, setIsSaving] = useState(false) //Initial saving is false
+  const [workoutHistory, setWorkoutHistory] = useState<Workout[]>([]) // Workout History is empty
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false) // Default is not loading history
+  const [activeTab, setActiveTab] = useState("current") //active tab is initially current
+  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null) //selected workout is initially set to null. No selected workouts yet
+  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [currentChallengeId, setcurrentChallengeId] = useState<string | null>(null) // current challenge Id is initially set to null
 
   useEffect(() => {
     if (user && activeTab === "history") {
-      fetchWorkoutHistory()
+      fetchWorkoutHistory() // If the user is authenticated and the active tab is set to "history" then call the fetchworkouthistory() function
     }
-  }, [user, activeTab])
+  }, [user, activeTab]) // This Effect happens if and only if there is a change in user and activeTab values
 
   const fetchWorkoutHistory = async () => {
-    if (!user) return
+    if (!user) return //if the user is unauthenticated, return nothing
 
-    setIsLoadingHistory(true)
+    setIsLoadingHistory(true) //Now Loading History
     const supabase = getSupabaseBrowserClient()
 
     try {
       const { data: workouts, error: workoutsError } = await supabase
-        .from("workouts")
-        .select("*")
-        .order("created_at", { ascending: false })
+        .from("workouts") //workouts table
+        .select("*")// all columns
+        .order("created_at", { ascending: false }) //descending true: from latest to oldest
 
       if (workoutsError) throw workoutsError
 
       const workoutsWithExercises = await Promise.all(
         workouts.map(async (workout) => {
           const { data: exercises, error: exercisesError } = await supabase
-            .from("workout_exercises")
-            .select("*")
-            .eq("workout_id", workout.id)
+            .from("workout_exercises") //workout_exercises table
+            .select("*") // all columns
+            .eq("workout_id", workout.id) // where workout_id is equivalent to workout.id
 
           if (exercisesError) throw exercisesError
 
           const exercisesWithSets = await Promise.all(
             exercises.map(async (exercise) => {
               const { data: sets, error: setsError } = await supabase
-                .from("workout_sets")
-                .select("*")
-                .eq("workout_exercise_id", exercise.id)
+                .from("workout_sets") //workout_sets table
+                .select("*") //all columns in that table
+                .eq("workout_exercise_id", exercise.id)//where workout_exercise_id is equivalent to exercise.id
 
               if (setsError) throw setsError
 
@@ -120,9 +122,9 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
       exercises.map((ex) =>
         ex.id === exerciseId
           ? {
-              ...ex,
-              sets: ex.sets.map((set, idx) => (idx === setIndex ? { ...set, [field]: value } : set)),
-            }
+            ...ex,
+            sets: ex.sets.map((set, idx) => (idx === setIndex ? { ...set, [field]: value } : set)),
+          }
           : ex,
       ),
     )
@@ -132,7 +134,7 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
     setExercises(exercises.filter((ex) => ex.id !== exerciseId))
   }
 
-  const saveWorkout = async () => {
+  const saveWorkout = async (ChallengeId: string | null) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -161,6 +163,7 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
           user_id: user.id,
           name: workoutName,
           notes: workoutNotes,
+          challenge_id: ChallengeId || null,
         })
         .select()
         .single()
@@ -418,15 +421,91 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
       </CardContent>
       <CardFooter>
         {activeTab === "current" && (
-          <Button
-            className="w-full bg-emerald-500 hover:bg-emerald-600"
-            onClick={saveWorkout}
-            disabled={isSaving || exercises.length === 0}
-          >
-            {isSaving ? "Saving..." : "Save Workout"}
-          </Button>
+          <>
+            <Button
+              className="w-full bg-emerald-500 hover:bg-emerald-600"
+              onClick={() => setIsChallengeModalOpen(true)}
+              disabled={isSaving || exercises.length === 0}
+            >
+              {isSaving ? "Saving..." : "Save Workout"}
+            </Button>
+
+            <ChallengeModal
+              isOpen={isChallengeModalOpen}
+              onClose={() => setIsChallengeModalOpen(false)}
+              onSelect={(selectedId) => {
+                console.log('Selected Challenge ID:', selectedId);
+                setcurrentChallengeId(selectedId);
+                setIsChallengeModalOpen(false);
+                saveWorkout(selectedId); 
+              }}
+            />
+          </>
         )}
       </CardFooter>
     </Card>
   )
 }
+
+const ChallengeModal = ({ 
+  isOpen, 
+  onClose, 
+  onSelect 
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (id: string | null) => void;
+}) => {
+  const [challenges, setChallenges] = useState<any[]>([]);
+  const supabase = getSupabaseBrowserClient();
+
+  useEffect(() => {
+    const loadChallenges = async () => {
+      const { data, error } = await supabase
+        .from('challenges')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!error) setChallenges(data || []);
+    };
+    loadChallenges();
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-background rounded-lg p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Select a Challenge</h3>
+          <button onClick={onClose} className="text-muted-foreground">
+            ✕
+          </button>
+        </div>
+        
+        <div className="grid gap-2 mb-4">
+          {challenges.map(challenge => (
+            <button
+              key={challenge.id}
+              className="p-4 border rounded-md text-left hover:bg-muted transition-colors"
+              onClick={() => onSelect(challenge.id)}
+            >
+              <h4 className="font-medium">{challenge.name}</h4>
+              <p className="text-sm text-muted-foreground">
+                {challenge.description}
+              </p>
+            </button>
+          ))}
+        </div>
+        
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={() => onSelect(null)}
+        >
+          Save as Personal Workout
+        </Button>
+      </div>
+    </div>
+  );
+};

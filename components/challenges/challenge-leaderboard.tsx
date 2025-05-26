@@ -9,31 +9,30 @@ import type { Challenge } from "@/types/challenges"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown, Equal } from "lucide-react"
 
-interface Workout {
-  id: string
-  user_id: string
-  created_at: string
-  exercises: {
-    exercise_id: string
-    name: string
-    sets: {
-      weight: number
-      reps: number
-    }[]
-  }[]
-}
+// interface Workout {
+//   id: string
+//   user_id: string
+//   created_at: string
+//   exercises: {
+//     exercise_id: string
+//     name: string
+//     sets: {
+//       weight: number
+//       reps: number
+//     }[]
+//   }[]
+// }
 
 interface Participant {
-  id: string
-  user_id: string
+  id: string;
+  user_id: string;
   profile: {
-    username: string
-    avatar_url?: string
-  }
-  currentVolume?: number
-  previousVolume?: number
-  percentageChange?: number
-  isCurrentUser?: boolean
+    username: string;
+    avatar_url?: string;
+  };
+  current_volume?: number;  
+  percentage_change?: number; 
+  isCurrentUser?: boolean;
 }
 
 export function ChallengeLeaderboard() {
@@ -91,150 +90,39 @@ export function ChallengeLeaderboard() {
     fetchChallenges()
   }, [user, supabase])
 
-  const calculateVolumeLoad = (workout: Workout): number => {
-    if (!workout.exercises || workout.exercises.length === 0) return 0
-
-    let workoutVolumeLoad = 0
-    let exerciseCount = 0
-
-    workout.exercises.forEach(exercise => {
-      if (!exercise.sets || exercise.sets.length === 0) return
-
-      const totalVolumeLoad = exercise.sets.reduce((sum, set) => sum + (set.weight * set.reps), 0)
-      const exerciseAverage = totalVolumeLoad / exercise.sets.length
-      workoutVolumeLoad += exerciseAverage
-      exerciseCount++
-    })
-
-    return exerciseCount > 0 ? workoutVolumeLoad / exerciseCount : 0
-  }
-
   const fetchChallengeData = async (challengeId: string) => {
-    if (!user) return;
+  if (!user) return;
 
-    try {
-      // 1. Get all participants for this challenge
-      const { data: participantsData, error: participantsError } = await supabase
-        .from("challenge_participants")
-        .select(`
-        id,
-        user_id,
-        profiles:user_id (username, avatar_url)
-      `)
-        .eq("challenge_id", challengeId);
+  try {
+    // 1. Trigger server-side cache update
+    await supabase.rpc('update_leaderboard_cache', { challenge_id: challengeId });
 
-      if (participantsError) throw participantsError;
-      if (!participantsData) return;
+    // 2. Fetch pre-calculated data
+    const { data: leaderboard, error } = await supabase
+      .from('leaderboard_cache')
+      .select('*')
+      .eq('challenge_id', challengeId)
+      .order('current_volume', { ascending: false });
 
-      // 2. Get challenge time period
-      const { data: challenge } = await supabase
-        .from("challenges")
-        .select("start_date, end_date")
-        .eq("id", challengeId)
-        .single();
+    if (error) throw error;
 
-      if (!challenge) return;
+    // 3. Map to expected format
+    setParticipants(leaderboard?.map(item => ({
+      id: item.user_id,
+      user_id: item.user_id,
+      profile: {
+        username: item.username,
+        avatar_url: item.avatar_url
+      },
+      current_volume: item.current_volume, // Map server field names
+      percentage_change: item.percentage_change,
+      isCurrentUser: item.user_id === user.id
+    })) || []);
 
-      // 3. Get workouts for all participants
-      const { data: workouts, error: workoutsError } = await supabase
-        .from("workouts")
-        .select(`
-        id,
-        user_id,
-        created_at,
-        exercises:workout_exercises(
-          workout_id,
-          name,
-          sets:workout_sets(
-            weight,
-            reps
-          )
-        )
-      `)
-        .in("user_id", participantsData.map(p => p.user_id))
-        .gte("created_at", challenge.start_date)
-        .lte("created_at", challenge.end_date)
-        .order("created_at", { ascending: false });
-
-      if (workoutsError) throw workoutsError;
-
-      // 4. Process and calculate metrics
-      const participantsWithData = participantsData.map(participant => {
-        const userWorkouts = workouts?.filter(w => w.user_id === participant.user_id) || [];
-
-        if (userWorkouts.length === 0) {
-          return {
-            ...participant,
-            profile: {
-              username: participant.profiles?.username || `User ${participant.user_id.substring(0, 6)}`,
-              avatar_url: participant.profiles?.avatar_url
-            },
-            currentVolume: 0,
-            previousVolume: 0,
-            percentageChange: 0,
-            isCurrentUser: participant.user_id === user.id
-          };
-        }
-
-        const currentWorkout = userWorkouts[0];
-        const previousWorkout = userWorkouts.length > 1 ? userWorkouts[1] : null;
-
-        const currentVolume = calculateVolumeLoad(currentWorkout);
-        const previousVolume = previousWorkout ? calculateVolumeLoad(previousWorkout) : 0;
-        const percentageChange = previousVolume
-          ? ((currentVolume - previousVolume) / previousVolume) * 100
-          : 0;
-
-        return {
-          ...participant,
-          profile: {
-            username: participant.profiles?.username || `User ${participant.user_id.substring(0, 6)}`,
-            avatar_url: participant.profiles?.avatar_url
-          },
-          currentVolume,
-          previousVolume,
-          percentageChange,
-          isCurrentUser: participant.user_id === user.id
-        };
-      });
-
-      await supabase
-        .from("leaderboard_cache") 
-        .upsert(
-          participantsWithData.map(p => ({
-            challenge_id: challengeId,
-            user_id: p.user_id,
-            username: p.profile.username,
-            current_volume: p.currentVolume,
-            percentage_change: p.percentageChange,
-            updated_at: new Date().toISOString()
-          })),
-          { onConflict: ["challenge_id", "user_id"] } 
-        );
-
-      const { data: leaderboardData } = await supabase
-        .from("leaderboard_cache")
-        .select("*")
-        .eq("challenge_id", challengeId)
-        .order("current_volume", { ascending: false });
-
-      const processedParticipants = leaderboardData?.map(item => ({
-        id: item.user_id, // Using user_id as temporary ID
-        user_id: item.user_id,
-        profile: {
-          username: item.username,
-          avatar_url: participantsData.find(p => p.user_id === item.user_id)?.profiles?.avatar_url
-        },
-        currentVolume: item.current_volume,
-        percentageChange: item.percentage_change,
-        isCurrentUser: item.user_id === user.id
-      })) || [];
-
-      setParticipants(processedParticipants);
-    } catch (error) {
-      console.error("Error fetching challenge data:", error);
-    }
-  };
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+  }
+};
 
   const handleChallengeChange = async (challengeId: string) => {
     const challenge = challenges.find(c => c.id === challengeId)
@@ -339,21 +227,21 @@ export function ChallengeLeaderboard() {
                       {participant.isCurrentUser && " (You)"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Current: {participant.currentVolume?.toFixed(2) || 0}
+                      Current Workout Volume: {participant.current_volume?.toFixed(2) || 0}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center">
-                  {participant.percentageChange !== undefined && participant.percentageChange > 0 ? (
+                  {participant.percentage_change !== undefined && participant.percentage_change > 0 ? (
                     <div className="text-emerald-500 flex items-center">
                       <TrendingUp className="h-4 w-4 mr-1" />
-                      <span>{Math.abs(participant.percentageChange).toFixed(2)}%</span>
+                      <span>{Math.abs(participant.percentage_change).toFixed(2)}%</span>
                     </div>
-                  ) : participant.percentageChange !== undefined && participant.percentageChange < 0 ? (
+                  ) : participant.percentage_change !== undefined && participant.percentage_change < 0 ? (
                     <div className="text-red-500 flex items-center">
                       <TrendingDown className="h-4 w-4 mr-1" />
-                      <span>{Math.abs(participant.percentageChange).toFixed(2)}%</span>
+                      <span>{Math.abs(participant.percentage_change).toFixed(2)}%</span>
                     </div>
                   ) : (
                     <div className="text-gray-500 flex items-center">
