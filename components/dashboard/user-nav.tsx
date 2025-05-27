@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChallengeInvitations } from "@/components/challenges/challenge-invitations"
 import { useToast } from "@/components/ui/use-toast"
 import { NotificationsDropdown } from "../notifications/notifications-dropdown"
+import { SidebarTrigger } from "../ui/sidebar"
 
 export function UserNav() {
   const { user, signOut } = useAuth()
@@ -113,42 +114,13 @@ export function UserNav() {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-2">
+      
+      <SidebarTrigger className="md:hidden"/>
       <NotificationsDropdown />
-      {/* <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            {invitationCount > 0 && (
-              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">
-                {invitationCount > 9 ? "9+" : invitationCount}
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-96" align="end">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center justify-between px-2">
-              <TabsList>
-                <TabsTrigger value="invitations" className="relative">
-                  Challenge Invitations
-                  {invitationCount > 0 && (
-                    <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] text-white">
-                      {invitationCount}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="invitations" className="mt-0 max-h-[400px] overflow-y-auto">
-              <ChallengeInvitations inDropdown onUpdate={handleInvitationUpdate} />
-            </TabsContent>
-          </Tabs>
-        </DropdownMenuContent>
-      </DropdownMenu> */}
 
       <DropdownMenu>
+
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
@@ -157,14 +129,19 @@ export function UserNav() {
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
+
+
         <DropdownMenuContent className="w-56" align="end" forceMount>
+
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{username}</p>
               <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
             </div>
           </DropdownMenuLabel>
+
           <DropdownMenuSeparator />
+
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => router.push("/profile")}>
               <User className="mr-2 h-4 w-4" />
@@ -175,11 +152,14 @@ export function UserNav() {
               <span>Settings</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
+
           <DropdownMenuSeparator />
+
           <DropdownMenuItem onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
           </DropdownMenuItem>
+
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
