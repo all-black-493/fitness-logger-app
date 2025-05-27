@@ -27,7 +27,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <AuthProvider>
             <ProfileTrigger />
             <QueryClientProvider client={queryClient}>
-              <SidebarTrigger className="md:hidden"/>
               {children}
               <ReactQueryDevtools initialIsOpen={false} />
             </QueryClientProvider>
