@@ -6,6 +6,8 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { useState } from "react"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProfileTrigger } from "@/components/auth/profile-trigger"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { MobileSidebar } from "@/components/MobileSidebar"
 
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -19,13 +21,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableColorScheme>
-      <AuthProvider>
-        <ProfileTrigger />
-        <QueryClientProvider client={queryClient}>
-          {children}
-          <ReactQueryDevtools initialIsOpen={false} />
-        </QueryClientProvider>
-      </AuthProvider>
+      <SidebarProvider>
+        <MobileSidebar/>
+        <SidebarInset>
+          <AuthProvider>
+            <ProfileTrigger />
+            <QueryClientProvider client={queryClient}>
+              <SidebarTrigger className="md:hidden"/>
+              {children}
+              <ReactQueryDevtools initialIsOpen={false} />
+            </QueryClientProvider>
+          </AuthProvider>
+        </SidebarInset>
+      </SidebarProvider>
     </ThemeProvider>
   )
 }
