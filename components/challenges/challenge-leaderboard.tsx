@@ -94,10 +94,8 @@ export function ChallengeLeaderboard() {
   if (!user) return;
 
   try {
-    // 1. Trigger server-side cache update
     await supabase.rpc('update_leaderboard_cache', { challenge_id: challengeId });
 
-    // 2. Fetch pre-calculated data
     const { data: leaderboard, error } = await supabase
       .from('leaderboard_cache')
       .select('*')
@@ -106,7 +104,6 @@ export function ChallengeLeaderboard() {
 
     if (error) throw error;
 
-    // 3. Map to expected format
     setParticipants(leaderboard?.map(item => ({
       id: item.user_id,
       user_id: item.user_id,
@@ -114,7 +111,7 @@ export function ChallengeLeaderboard() {
         username: item.username,
         avatar_url: item.avatar_url
       },
-      current_volume: item.current_volume, // Map server field names
+      current_volume: item.current_volume, 
       percentage_change: item.percentage_change,
       isCurrentUser: item.user_id === user.id
     })) || []);
@@ -227,7 +224,7 @@ export function ChallengeLeaderboard() {
                       {participant.isCurrentUser && " (You)"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Current Workout Volume: {participant.current_volume?.toFixed(2) || 0}
+                      Current Workout Volume: {participant.current_volume?.toFixed(1) || 0}
                     </p>
                   </div>
                 </div>

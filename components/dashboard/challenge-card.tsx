@@ -70,7 +70,7 @@ export function ChallengeCard() {
             .eq("challenge_id", challenges[0].id) // where challenge_id is equivalent to Challenge.id
             .order("progress", { ascending: false }) //Highest first Lowest last
 
-          console.log('Participants are: ', participants)
+          // console.log('Participants are: ', participants)
           if (participantsError) throw participantsError
           setParticipants(participants || [])
 
