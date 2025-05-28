@@ -29,6 +29,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
+  Legend,
 } from "recharts"
 import { useAuth } from "@/contexts/auth-context"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -36,12 +37,17 @@ import { toast } from "@/components/ui/use-toast"
 import { getSupabaseBrowserClient } from "@/lib/supabase"
 import gsap from "gsap"
 
-type TrendData = {
-  day?: string
-  week?: string
-  you: number
-  average: number
+type ParticipantData = {
+  user_id: string
+  user_name: string
+  is_you: boolean
+  is_average: boolean
+  volume: number
 }
+
+type TrendDataPoint = {
+  [key: string]: string | number
+} & Record<string, number>
 
 type Challenge = {
   id: string
@@ -54,10 +60,11 @@ export function ProgressChart() {
   const chartRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("weekly")
-  const [weeklyData, setWeeklyData] = useState<TrendData[]>([])
-  const [monthlyData, setMonthlyData] = useState<TrendData[]>([])
+  const [weeklyData, setWeeklyData] = useState<TrendDataPoint[]>([])
+  const [monthlyData, setMonthlyData] = useState<TrendDataPoint[]>([])
   const [challenges, setChallenges] = useState<Challenge[]>([])
   const [selectedChallenge, setSelectedChallenge] = useState<string>("")
+  const [participantColors, setParticipantColors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -82,7 +89,7 @@ export function ProgressChart() {
         .select("challenge_id")
         .eq("user_id", user.id)
 
-      // console.log(`This line is working. The participants in line 80: `, participants)
+      console.log('The participants: ', participants)
 
       if (participantsError) throw participantsError
       if (!participants.length) {
@@ -92,14 +99,15 @@ export function ProgressChart() {
 
       const challengeIds = participants.map(p => p.challenge_id)
 
+      console.log('The Challenge IDs: ', challengeIds)
+
       const { data: challengeData, error: challengesError } = await supabase
         .from("challenges")
         .select("id, name, end_date")
         .in("id", challengeIds)
         .or(`end_date.gte.${new Date().toISOString()},end_date.is.null`)
 
-      // console.log(`This line is not working. It gives null. The challenge data in line 94: `, challengeData)
-
+      console.log('The Challenge Data: ', challengeData)
 
       if (challengesError) throw challengesError
 
@@ -118,62 +126,114 @@ export function ProgressChart() {
     }
   }
 
-  const transformTrendData = (rawData: any[]): TrendData[] => {
-    const key = rawData.length && rawData[0].day ? "day" : "week"
-    const grouped: Record<string, { you?: number; average?: number }> = {}
+  const generateColors = (participants: ParticipantData[]) => {
+    const colors: Record<string, string> = {}
+    const colorPalette = [
+      "#10b981", // emerald (current user)
+      "#3b82f6", // blue
+      "#f59e0b", // amber
+      "#ef4444", // red
+      "#8b5cf6", // violet
+      "#ec4899", // pink
+      "#14b8a6", // teal
+      "#f97316", // orange
+      "#6b7280", // gray (average)
+    ]
 
-    rawData.forEach(({ [key]: label, is_you, volume }) => {
-      if (!grouped[label]) grouped[label] = {}
-      if (is_you) grouped[label].you = volume
-      else grouped[label].average = volume
+    participants.forEach((participant, index) => {
+      if (participant.is_you) {
+        colors[participant.user_id] = colorPalette[0]
+      } else if (participant.is_average) {
+        colors[participant.user_id] = colorPalette[colorPalette.length - 1]
+      } else {
+        colors[participant.user_id] = colorPalette[(index % (colorPalette.length - 2)) + 1]
+      }
     })
 
-    return Object.entries(grouped).map(([label, vals]) => ({
-      [key]: label,
-      you: vals.you ?? 0,
-      average: vals.average ?? 0,
-    }))
+    return colors
+  }
+
+  const transformTrendData = (rawData: any[], timeKey: 'day' | 'week'): TrendDataPoint[] => {
+    if (!rawData || rawData.length === 0) return []
+
+    const grouped: Record<string, TrendDataPoint> = {}
+    const participants = new Set<string>()
+
+    rawData.forEach(item => {
+      const timeValue = item[timeKey]
+      const userId = item.user_id
+      participants.add(userId)
+
+      if (!grouped[timeValue]) {
+        grouped[timeValue] = { [timeKey]: timeValue }
+      }
+
+      grouped[timeValue][userId] = item.volume
+      grouped[timeValue][`${userId}_name`] = item.user_name
+      grouped[timeValue][`${userId}_is_you`] = item.is_you
+      grouped[timeValue][`${userId}_is_average`] = item.is_average
+    })
+
+    const participantColors = generateColors(
+      Array.from(participants).map(userId => ({
+        user_id: userId,
+        user_name: rawData.find(item => item.user_id === userId)?.user_name || 'Unknown',
+        is_you: rawData.some(item => item.user_id === userId && item.is_you),
+        is_average: rawData.some(item => item.user_id === userId && item.is_average),
+        volume: 0
+      }))
+    )
+    setParticipantColors(participantColors)
+
+    return Object.values(grouped).sort((a, b) => {
+      if (timeKey === 'day') {
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        return days.indexOf(a[timeKey] as string) - days.indexOf(b[timeKey] as string)
+      } else {
+        return parseInt(a[timeKey] as string) - parseInt(b[timeKey] as string)
+      }
+    })
   }
 
   const fetchWorkoutData = async (challengeId: string) => {
     if (!user) return
     setIsLoading(true)
 
+    console.log('The parameter for fetchWorkoutData function: ', challengeId)
+
     try {
       const { data, error } = await supabase.rpc("get_user_volume_trends", {
         input_user_id: user.id,
         input_challenge_id: challengeId,
       })
-      console.log(`The output from database function: `, data)
+
+      console.log('Output of database function: ', data)
 
       if (error) throw error
+      if (!data) {
+        toast({
+          title: "No Data",
+          description: "No workout data found for this challenge",
+          variant: "default",
+        })
+        return
+      }
 
-      setWeeklyData(transformTrendData(data.weekly || []))
-      setMonthlyData(transformTrendData(data.monthly || []))
+      console.log("WEEKLY-DATA [Raw - FULL]: ", data)      
+      console.log("WEEKLY-DATA [Raw]: ", data.weekly)
+      console.log("WEEKLY-DATA [Processed]: ", transformTrendData(data.weekly || [], 'day'))
+
+      setWeeklyData(transformTrendData(data.weekly || [], 'day'))
+      setMonthlyData(transformTrendData(data.monthly || [], 'week'))
     } catch (error) {
       console.error("Error fetching workout data:", error)
       toast({
         title: "Error",
-        description: "Failed to load progress data. Using sample data instead.",
+        description: "Failed to load progress data",
         variant: "destructive",
       })
-
-      setWeeklyData([
-        { day: "Mon", you: 120, average: 100 },
-        { day: "Tue", you: 150, average: 110 },
-        { day: "Wed", you: 140, average: 115 },
-        { day: "Thu", you: 180, average: 120 },
-        { day: "Fri", you: 190, average: 125 },
-        { day: "Sat", you: 210, average: 130 },
-        { day: "Sun", you: 200, average: 135 },
-      ])
-
-      setMonthlyData([
-        { week: "Week 1", you: 800, average: 700 },
-        { week: "Week 2", you: 900, average: 750 },
-        { week: "Week 3", you: 1100, average: 800 },
-        { week: "Week 4", you: 1200, average: 850 },
-      ])
+      setWeeklyData([])
+      setMonthlyData([])
     } finally {
       setIsLoading(false)
     }
@@ -237,6 +297,11 @@ export function ProgressChart() {
           <div className="text-center py-8 text-muted-foreground">
             <p>You're not currently participating in any active challenges</p>
           </div>
+        ) : weeklyData.length === 0 && monthlyData.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No workout data available for this challenge yet</p>
+            <p className="text-sm">Complete a workout to see your progress</p>
+          </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
@@ -245,11 +310,19 @@ export function ProgressChart() {
             </TabsList>
 
             <TabsContent value="weekly" className="pt-4">
-              <ChartContainer data={weeklyData} dataKey="day" />
+              <MultiParticipantChart
+                data={weeklyData}
+                dataKey="day"
+                participantColors={participantColors}
+              />
             </TabsContent>
 
             <TabsContent value="monthly" className="pt-4">
-              <ChartContainer data={monthlyData} dataKey="week" />
+              <MultiParticipantChart
+                data={monthlyData}
+                dataKey="week"
+                participantColors={participantColors}
+              />
             </TabsContent>
           </Tabs>
         )}
@@ -258,7 +331,20 @@ export function ProgressChart() {
   )
 }
 
-function ChartContainer({ data, dataKey }: { data: TrendData[]; dataKey: string }) {
+function MultiParticipantChart({
+  data,
+  dataKey,
+  participantColors
+}: {
+  data: TrendDataPoint[],
+  dataKey: string,
+  participantColors: Record<string, string>
+}) {
+  const { user } = useAuth()
+  const participantIds = Object.keys(participantColors)
+
+  console.log("challenge graph data:-> ", data)
+
   return (
     <div className="chart-container h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
@@ -266,42 +352,56 @@ function ChartContainer({ data, dataKey }: { data: TrendData[]; dataKey: string 
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis dataKey={dataKey} />
           <YAxis />
-          <Tooltip content={<CustomTooltip />} />
-          <Line
-            type="monotone"
-            dataKey="you"
-            stroke="#10b981"
-            strokeWidth={3}
-            dot={{ r: 4, fill: "#10b981" }}
-            activeDot={{ r: 6 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="average"
-            stroke="#6b7280"
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            activeDot={{ r: 5 }}
-          />
+          <Tooltip content={<MultiParticipantTooltip participantColors={participantColors} />} />
+          <Legend />
+          {participantIds.map(userId => (
+            <Line
+              key={userId}
+              type="monotone"
+              dataKey={userId}
+              name={data[0]?.[`${userId}_name`] as string || userId}
+              stroke={participantColors[userId]}
+              strokeWidth={userId === 'average' ? 2 : userId === user?.id ? 3 : 2}
+              dot={{
+                r: userId === 'average' ? 3 : userId === user?.id ? 4 : 3,
+                fill: participantColors[userId]
+              }}
+              activeDot={{ r: userId === 'average' ? 5 : 6 }}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
   )
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length >= 2) {
+function MultiParticipantTooltip({
+  active,
+  payload,
+  label,
+  participantColors
+}: any) {
+  if (active && payload && payload.length) {
     return (
       <div className="bg-background border rounded-md shadow-md p-3">
         <p className="font-bold">{label}</p>
-        <div className="flex items-center mt-1">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 mr-2" />
-          <span>You: {payload[0].value}</span>
-        </div>
-        <div className="flex items-center mt-1">
-          <div className="h-2 w-2 rounded-full bg-gray-500 mr-2" />
-          <span>Average: {payload[1].value}</span>
-        </div>
+        {payload.map((entry: any) => {
+          const userId = entry.dataKey
+          const isYou = entry.payload[`${userId}_is_you`]
+          const isAverage = entry.payload[`${userId}_is_average`]
+          const userName = entry.payload[`${userId}_name`] ||
+            (isYou ? 'You' : isAverage ? 'Average' : 'Unknown')
+
+          return (
+            <div key={userId} className="flex items-center mt-1">
+              <div
+                className="h-2 w-2 rounded-full mr-2"
+                style={{ backgroundColor: participantColors[userId] }}
+              />
+              <span>{userName}: {entry.value}</span>
+            </div>
+          )
+        })}
       </div>
     )
   }
