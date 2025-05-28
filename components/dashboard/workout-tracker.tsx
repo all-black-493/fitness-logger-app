@@ -437,7 +437,7 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
                 console.log('Selected Challenge ID:', selectedId);
                 setcurrentChallengeId(selectedId);
                 setIsChallengeModalOpen(false);
-                saveWorkout(selectedId); 
+                saveWorkout(selectedId);
               }}
             />
           </>
@@ -447,29 +447,59 @@ export function WorkoutTracker({ className }: WorkoutTrackerProps) {
   )
 }
 
-const ChallengeModal = ({ 
-  isOpen, 
-  onClose, 
-  onSelect 
+const ChallengeModal = ({
+  isOpen,
+  onClose,
+  onSelect
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (id: string | null) => void;
 }) => {
   const [challenges, setChallenges] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const supabase = getSupabaseBrowserClient();
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadChallenges = async () => {
-      const { data, error } = await supabase
-        .from('challenges')
-        .select('*')
-        .order('created_at', { ascending: false });
+      if (!user?.id) return;
       
-      if (!error) setChallenges(data || []);
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const currentTime = new Date().toISOString();
+        
+        const { data, error: fetchError } = await supabase
+          .from('challenges')
+          .select(`
+            *,
+            challenge_participants!inner(user_id)
+          `)
+          .eq('challenge_participants.user_id', user.id)
+          .lt('start_date', currentTime)
+          .gt('end_date', currentTime)
+          .order('created_at', { ascending: false });
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        setChallenges(data || []);
+      } catch (err) {
+        console.error('Error loading challenges:', err);
+        setError('Failed to load challenges');
+      } finally {
+        setIsLoading(false);
+      }
     };
-    loadChallenges();
-  }, []);
+
+    if (isOpen && user?.id) {
+      loadChallenges();
+    }
+  }, [isOpen, user, supabase]);
 
   if (!isOpen) return null;
 
@@ -482,29 +512,41 @@ const ChallengeModal = ({
             ✕
           </button>
         </div>
-        
-        <div className="grid gap-2 mb-4">
-          {challenges.map(challenge => (
-            <button
-              key={challenge.id}
-              className="p-4 border rounded-md text-left hover:bg-muted transition-colors"
-              onClick={() => onSelect(challenge.id)}
+
+        {isLoading ? (
+          <div className="flex justify-center py-8">Loading challenges...</div>
+        ) : error ? (
+          <div className="text-red-500 py-4 text-center">{error}</div>
+        ) : challenges.length === 0 ? (
+          <div className="py-4 text-center text-muted-foreground">
+            No active challenges found
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-2 mb-4">
+              {challenges.map(challenge => (
+                <button
+                  key={challenge.id}
+                  className="p-4 border rounded-md text-left hover:bg-muted transition-colors"
+                  onClick={() => onSelect(challenge.id)}
+                >
+                  <h4 className="font-medium">{challenge.name}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {challenge.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => onSelect(null)}
             >
-              <h4 className="font-medium">{challenge.name}</h4>
-              <p className="text-sm text-muted-foreground">
-                {challenge.description}
-              </p>
-            </button>
-          ))}
-        </div>
-        
-        <Button 
-          variant="outline" 
-          className="w-full"
-          onClick={() => onSelect(null)}
-        >
-          Save as Personal Workout
-        </Button>
+              Save as Personal Workout
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
