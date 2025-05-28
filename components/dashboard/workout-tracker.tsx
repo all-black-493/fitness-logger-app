@@ -465,13 +465,13 @@ const ChallengeModal = ({
   useEffect(() => {
     const loadChallenges = async () => {
       if (!user?.id) return;
-      
+
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const currentTime = new Date().toISOString();
-        
+
         const { data, error: fetchError } = await supabase
           .from('challenges')
           .select(`
@@ -518,8 +518,15 @@ const ChallengeModal = ({
         ) : error ? (
           <div className="text-red-500 py-4 text-center">{error}</div>
         ) : challenges.length === 0 ? (
-          <div className="py-4 text-center text-muted-foreground">
-            No active challenges found
+          <div className="flex justify-center grid gap-2 mb-4">
+            <p className="py-4 text-center text-muted-foreground">No active challenges found</p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => onSelect(null)}
+            >
+              Save as Personal Workout
+            </Button>
           </div>
         ) : (
           <>

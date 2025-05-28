@@ -10,6 +10,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Search, UserPlus, Users } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface Friend {
   id: string
@@ -32,6 +33,7 @@ export function InviteFriends({ challengeId, onClose }: InviteFriendsProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const { toast } = useToast()
   const supabase = getSupabaseBrowserClient()
+  const router = useRouter()
 
   useEffect(() => {
     if (!user) return
@@ -148,6 +150,8 @@ export function InviteFriends({ challengeId, onClose }: InviteFriendsProps) {
         }),
       )
 
+      router.refresh()
+      console.log("REFRESHING ROUTER")
       toast({
         title: "Invitations sent",
         description: `Invited ${selectedFriends.length} friend${selectedFriends.length > 1 ? "s" : ""} to the challenge`,
@@ -233,9 +237,8 @@ export function InviteFriends({ challengeId, onClose }: InviteFriendsProps) {
               return (
                 <div
                   key={friend.id}
-                  className={`flex items-center space-x-2 p-2 rounded-md hover:bg-muted cursor-pointer ${
-                    friend.selected ? "bg-muted" : ""
-                  }`}
+                  className={`flex items-center space-x-2 p-2 rounded-md hover:bg-muted cursor-pointer ${friend.selected ? "bg-muted" : ""
+                    }`}
                   onClick={() => toggleFriendSelection(friend.id)}
                 >
                   <Checkbox checked={friend.selected} />
