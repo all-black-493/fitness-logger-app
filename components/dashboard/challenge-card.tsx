@@ -238,46 +238,6 @@ export function ChallengeCard() {
     }
   }
 
-  // Create a sample challenge if none exists
-  const createSampleChallenge = async () => {
-    if (!user) return
-
-    setLoading(true)
-    try {
-      // Create a challenge
-      const challenge = {
-        name: "Weekly Steps Challenge",
-        description: "Who can get the most steps this week?",
-        start_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-        end_date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days from now
-        created_by: user.id,
-      }
-
-      const { data: newChallenge, error } = await supabase.from("challenges").insert(challenge).select().single()
-
-      if (error) throw error
-
-      // Add the current user as a participant
-      await supabase.from("challenge_participants").insert({
-        challenge_id: newChallenge.id,
-        user_id: user.id,
-        progress: 65.5,
-      })
-
-      // Refresh the page
-      window.location.reload()
-    } catch (error) {
-      console.error("Error creating sample challenge:", error)
-      toast({
-        title: "Error",
-        description: "Failed to create sample challenge",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (loading) {
     return (
       <Card>
@@ -332,9 +292,6 @@ export function ChallengeCard() {
           <div className="text-center py-8">
             <Trophy className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
             <p className="text-muted-foreground">Check back later or create a new challenge to compete with friends.</p>
-            <Button onClick={createSampleChallenge} className="mt-4">
-              Create Sample Challenge
-            </Button>
           </div>
 
           {upcomingChallenges.length > 0 && (
