@@ -142,7 +142,6 @@ export function FriendRequests() {
         description: "Your friend request has been sent successfully",
       })
 
-      // Update search results to show pending
       setSearchResults((prev) =>
         prev.map((profile) => (profile.id === receiverId ? { ...profile, requestSent: true } : profile)),
       )

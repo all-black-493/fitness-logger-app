@@ -9,20 +9,6 @@ import type { Challenge } from "@/types/challenges"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown, Equal } from "lucide-react"
 
-// interface Workout {
-//   id: string
-//   user_id: string
-//   created_at: string
-//   exercises: {
-//     exercise_id: string
-//     name: string
-//     sets: {
-//       weight: number
-//       reps: number
-//     }[]
-//   }[]
-// }
-
 interface Participant {
   id: string;
   user_id: string;
@@ -49,8 +35,8 @@ export function ChallengeLeaderboard() {
 
     const fetchChallenges = async () => {
       setLoading(true)
+      
       try {
-        // Get challenges where user is a participant
         const { data: challenges, error } = await supabase
           .from("challenges")
           .select("*")
@@ -60,7 +46,6 @@ export function ChallengeLeaderboard() {
 
         if (error) throw error
 
-        // Check which challenges the user is participating in
         if (challenges && challenges.length > 0) {
           const { data: participants } = await supabase
             .from("challenge_participants")
@@ -94,7 +79,7 @@ export function ChallengeLeaderboard() {
   if (!user) return;
 
   try {
-    await supabase.rpc('update_leaderboard_cache', { challenge_id: challengeId });
+    await supabase.rpc('update_leaderboard_cache', { input_challenge_id: challengeId });
 
     const { data: leaderboard, error } = await supabase
       .from('leaderboard_cache')

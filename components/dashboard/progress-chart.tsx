@@ -219,7 +219,7 @@ export function ProgressChart() {
         return
       }
 
-      console.log("WEEKLY-DATA [Raw - FULL]: ", data)      
+      console.log("WEEKLY-DATA [Raw - FULL]: ", data)
       console.log("WEEKLY-DATA [Raw]: ", data.weekly)
       console.log("WEEKLY-DATA [Processed]: ", transformTrendData(data.weekly || [], 'day'))
 

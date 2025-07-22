@@ -61,37 +61,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
-  const signUp = async (email: string, password: string, options?: { metadata?: Record<string, any> }) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    options?: { metadata?: Record<string, any> }
+  ): Promise<{ error: any }> => {
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: 'https://fitness-logger-all-black-493s-projects.vercel.app/dashboard',
+        emailRedirectTo: "https://fitness-logger-all-black-493s-projects.vercel.app/dashboard",
       },
     })
 
     if (!error && data.user) {
       try {
+        const userId = data.user.id
         const username = email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "")
-
         const fullName = options?.metadata?.full_name || null
-
         const firstLetter = email.charAt(0).toUpperCase()
         const avatarUrl = `https://ui-avatars.com/api/?name=${firstLetter}&background=10b981&color=ffffff`
 
-        await supabase.from("profiles").insert({
-          id: data.user.id,
-          username: username,
-          full_name: fullName,
-          avatar_url: avatarUrl,
-        })
-      } catch (profileError) {
-        console.error("Error creating profile during signup:", profileError)
+        // Use upsert to avoid duplicate key error
+        const { error: profileError } = await supabase.from("profiles").upsert(
+          {
+            id: userId,
+            username,
+            full_name: fullName,
+            avatar_url: avatarUrl,
+          },
+          { onConflict: "id" } // optional, but makes intent clearer
+        )
+
+        if (profileError) {
+          console.error("Error upserting profile during signup:", profileError)
+        }
+      } catch (profileCatchError) {
+        console.error("Exception during profile creation:", profileCatchError)
       }
     }
 
     return { error }
   }
+
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

@@ -12,7 +12,6 @@ import { getSupabaseBrowserClient } from "@/lib/supabase"
 import type { Challenge, ChallengeParticipant, UpcomingChallenge } from "@/types/challenges"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/components/ui/use-toast"
 import { Trophy, UserPlus, Users } from "lucide-react"
 import { InviteFriends } from "@/components/challenges/invite-friends"
@@ -86,18 +85,17 @@ export function ChallengeCard() {
               .from("challenge_invitations")
               .select(`
                 *,
-                receiver:profiles!challenge_invitations_receiver_id_fkey(username, full_name, avatar_url)
+                receiver:profiles!fk_receiver_id_profiles(username, full_name, avatar_url)
               `) // 6. The alias here is receiver, so we get the pending invitations for this challenge this way {invites.receiver}
               .eq("challenge_id", challenges[0].id) //obvious
-              .eq("sender_id", user.id) //obvious
-              .eq("status", "pending") //obvious
+              .eq("sender_id", user.id) 
+              .eq("status", "pending") 
 
             if (invitesError) throw invitesError
             setPendingInvites(invites || [])
           }
         }
 
-        // 7. Get upcoming challenges
         const { data: upcoming, error: upcomingError } = await supabase
           .from("challenges")
           .select("*")
